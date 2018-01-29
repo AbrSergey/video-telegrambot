@@ -26,7 +26,13 @@ dispatcher.add_handler(start_handler)
 
 def echo(bot, update):
     text = update.message.text
-    bot.send_message(chat_id=update.message.chat_id, text='It is answer')
+    bot.send_message(chat_id=update.message.chat_id, text=check_url(text))
+
+def check_url(url):
+    if url[0:29] == "https://www.youtube.com/watch":
+        return "This is an youtube video"
+    else:
+        return "Wrong. It is not an youtube video"
 
 
 from telegram.ext import MessageHandler, Filters
