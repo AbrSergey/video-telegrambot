@@ -1,0 +1,5 @@
+SpeechRecognition==3.8.1
+validators==0.12.1
+requests==2.9.1
+pafy==0.5.3.1
+python-telegram-bot==9.0.0
