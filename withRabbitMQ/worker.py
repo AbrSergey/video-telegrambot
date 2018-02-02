@@ -17,11 +17,36 @@ from config import TOKEN, BING_KEY
 
 url_bot = "https://api.telegram.org/bot" + TOKEN + "/"
 
+
 def get_id(url):
     url = url[url.find("=")+1:]
     if url.find("=") == -1:
         url = url[:url.find("=")]
     return url
+
+
+def clean_text(text):
+    words = text.split(" ")
+    text = ""
+    for word in words:
+        if word != "hmm" and word != "Hmm":
+            text += word + " "
+    return text
+
+
+def lang_check(l):
+    if l in ['en', 'EN', 'eng', 'english', 'ENG']:
+        return 'en-US'
+    else:
+        return "ru-RU"
+
+
+def sub_check(s):
+    if s == "no_sub":
+        return False
+    else:
+        return True
+
 
 def sound_from_youtube(url):
     video = pafy.new(url)
@@ -29,7 +54,6 @@ def sound_from_youtube(url):
     name = get_id(url)
     best.download(filepath=name + ".webm")
     command = "ffmpeg -i " + name + ".webm -ab 160k -ac 2 -ar 44100 -vn " + name + ".wav"
-    # command = "ffmpeg -i " + name + ".webm " + name + ".wav"
     subprocess.call(command, shell=True)
 
 
@@ -44,6 +68,7 @@ def url_check(url):
     else:
         return False
 
+
 def check_in_folder(id):
     id_hash = hashlib.sha1(id.encode('utf8')).hexdigest()
     try:
@@ -51,6 +76,7 @@ def check_in_folder(id):
         return True
     except IOError:
         return False
+
 
 def send_mess(chat, text):
     params = {'chat_id': chat, 'text': text}
@@ -78,10 +104,21 @@ def download_subtitles(url):
     except Exception:
         return False
 
-def send_subtitles(chat_id, url):
+
+def send_subtitles(chat_id, message):
+    message = message.split(" ")
+    url = message[0]
+    lang = "ru-RU"
+    sub = True
     name = get_id(url)
     name_hashed = hashlib.sha1(name.encode('utf8')).hexdigest()
-    if check_in_folder(name):
+    if len(message) == 2:
+        lang = lang_check(message[1])
+        sub = sub_check(message[1])
+    if len(message) == 3:
+        lang = lang_check(message[1])
+        sub = sub_check(message[2])
+    if sub and check_in_folder(name):
         with open('subtitles/' + name_hashed) as f:
             fulltext = f.readlines()
             i = 0
@@ -95,7 +132,7 @@ def send_subtitles(chat_id, url):
             send_mess(chat_id, text)
             send_mess(chat_id, text="*** Subtitles are over  ***")
             print("Subtitles are over  " + str(chat_id)) #TMP
-    elif download_subtitles(url):
+    elif sub and download_subtitles(url):
         with open('subtitles/' + name_hashed) as f:
             fulltext = f.readlines()
             i = 0
@@ -125,13 +162,14 @@ def send_subtitles(chat_id, url):
                     break
                 audio = r.record(source, duration=15)
                 try:
-                    text = (r.recognize_bing(audio, key=BING_KEY, language="ru-RU")) + "\n"
+                    text = (r.recognize_bing(audio, key=BING_KEY, language=lang)) + "\n"
+                    text = clean_text(text)
+                    fulltext.append(text)
                 except sr.UnknownValueError:
                     text = "*** Microsoft Bing Voice Recognition could not understand this fragment ***\n"
                 except sr.RequestError as e:
                     text = "*** Could not request results from Microsoft Bing Voice Recognition service ***\n"
                 send_mess(chat_id, text=text)
-                fulltext.append(text)
                 duration -= 15
         send_mess(chat_id, text="*** Subtitles are over ***")
         with open('subtitles/' + name_hashed, "w") as f:
@@ -140,7 +178,6 @@ def send_subtitles(chat_id, url):
                     f.writelines(line)
         subprocess.call(["rm", name + ".wav"])
         subprocess.call(["rm", name + ".webm"])
-
 
 
 def callback(ch, method, properties, body):

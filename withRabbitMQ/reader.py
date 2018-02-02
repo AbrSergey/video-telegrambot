@@ -11,15 +11,15 @@ import validators
 from config import TOKEN, BING_KEY
 
 
-
 def start(bot, update):
     bot.send_message(chat_id=update.message.chat_id,
                      text="Good day, " + update.message.chat.first_name + "! I am the videosubtitler bot")
     bot.send_message(chat_id=update.message.chat_id,
                      text="To know more information about me write command 'help'")
 
+
 def echo(bot, update):
-    message = update.message.text
+    message = update.message.text.split(" ")[0]
     chat_id = update['message']['chat']['id']
     if url_check(message):
         print("before json") #TMP
@@ -36,12 +36,14 @@ def echo(bot, update):
         bot.send_message(chat_id=update.message.chat_id, text="*** This is no valid URL. " +
                                                               "Please enter correct YouTube video URL ***")
 
+
 def help(bot, update):
     help_text = ""
     with open("help.txt", "r") as h:
         for s in h:
             help_text += "\n" + s
     bot.send_message(chat_id=update.message.chat_id, text=help_text)
+
 
 def url_check(url):
     list = ['www.youtube.']
@@ -66,6 +68,7 @@ def main():
     help_handler = CommandHandler("help", help)
     dispatcher.add_handler(help_handler)
     updater.start_polling()
+
 
 if __name__ == '__main__':
     queue = 'telegram_bot'
