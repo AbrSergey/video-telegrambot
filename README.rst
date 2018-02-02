@@ -18,7 +18,7 @@ Video-telegrambot - это бот для мессенджера Telegram, кот
     apt-get install -y ffmpeg
     pip3 install -r requirements.txt
 
-    Добавьте файл congif.py с полемями TOKEN="your telegram bot token" и BING_KEY="your microsoft bing speech token"
+    Добавьте файл congif.py с полями TOKEN="your telegram bot token" и BING_KEY="your microsoft bing speech token"
 
     pip3 ./bot.py
 
@@ -34,12 +34,25 @@ Video-telegrambot - это бот для мессенджера Telegram, кот
     pip3 install -r requirements.txt
     rabbitmq-server start
 
-    Добавьте файл congif.py с полемями TOKEN="your telegram bot token" и BING_KEY="your microsoft bing speech token"
+    Добавьте файл congif.py с полями TOKEN="your telegram bot token" и BING_KEY="your microsoft bing speech token"
 
     python3 ./reader.py
     python3 ./worker.py
     ...
     python3 ./worker.py
+
+Второй вариант - использование docker-контейнера: ::
+
+    Скачайте и установите Docker и загрузите образ с помощью команды:
+    docker pull alekseypauls/videotelegrambot
+    или 
+    docker pull alekseypauls/multithreadedbot
+    Сойздайте контейнер:
+    docker run -it -p 80:80 alekseypauls/videotelegrambot bash
+    Внутри контейнера выполните команду:
+    python3 ./bot.py
+    
+    Готово! 
 
 --------------------------
 Пользовательский интерфейс
