@@ -6,5 +6,6 @@ If there are no subtitles, you will see the message "*** Good URL. Wait for the 
 Then the bot with periodicity in a few seconds will send you fragments of subtitles. If the server could not recognize the audio fragment, you will see "*** Microsoft Bing Voice Recognition could not understand this fragment ***". If server could not send request you will see "*** Could not request results from Microsoft Bing Voice Recognition service ***"
 At the end of the subtitles "*** Subtitles are over ***" will be displayed. Having created subtitles for this video once you no longer have to wait yet - the subtitles for each handled video are saved.
 If there is no correct YouTube video URL you get message "*** This is no valid URL. Please enter correct YouTube video URL ***"
+You can use the optional parameter "en" (or "eng", "EN", "english") to recognize speech in english language and optional parameter "no_sub" to ignore youtube subtitles. 
 It is all information you should know about this bot. Good using!
 ------------------------------

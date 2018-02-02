@@ -10,7 +10,8 @@ import contextlib
 import subprocess
 import hashlib
 import glob
-
+import numpy as np
+import youtube_dl
 
 """   Bot part   """
 
@@ -26,25 +27,36 @@ def start(bot, update):
 
 
 def echo(bot, update):
-    message = update.message.text
-    if url_check(message):
-        name = get_id(message)
+    message = update.message.text.split(" ")
+    url = message[0]
+    lang = "ru-RU"
+    sub = True
+    if len(message) == 2:
+        lang = lang_check(message[1])
+        sub = sub_check(message[1])
+    if len(message) == 3:
+        lang = lang_check(message[1])
+        sub = sub_check(message[2])
+    if url_check(url):
+        name = get_id(url)
         name_hashed = hashlib.sha1(name.encode('utf8')).hexdigest()
-        if check_in_folder(name):
+        if sub and check_in_folder(name):
             with open('subtitles/' + name_hashed) as f:
                 fulltext = f.read()
                 bot.send_message(chat_id=update.message.chat_id, text="*** Good URL. "
                                                                       "There is subtitles for this video: ***")
                 bot.send_message(chat_id=update.message.chat_id, text=fulltext)
-        elif get_subtitles(message):
+                bot.send_message(chat_id=update.message.chat_id, text="*** Subtitles are over ***")
+        elif sub and get_subtitles(url):
             with open('subtitles/' + name_hashed) as f:
                 fulltext = f.read()
                 bot.send_message(chat_id=update.message.chat_id, text="*** Good URL. "
                                                                       "There is subtitles for this video: *** ")
                 bot.send_message(chat_id=update.message.chat_id, text=fulltext)
+                bot.send_message(chat_id=update.message.chat_id, text="*** Subtitles are over ***")
         else:
             bot.send_message(chat_id=update.message.chat_id, text="*** Good URL. Wait for the audio file loading ***")
-            sound_from_youtube(message)
+            sound_from_youtube(url)
             bot.send_message(chat_id=update.message.chat_id, text="*** Audio file is loaded. "
                                                                   "Now messages with subtitles will come to you ***")
             r = sr.Recognizer()
@@ -59,13 +71,14 @@ def echo(bot, update):
                         break
                     audio = r.record(source, duration=15)
                     try:
-                        text = (r.recognize_bing(audio, key=BING_KEY, language="ru-RU")) + "\n"
+                        text = (r.recognize_bing(audio, key=BING_KEY, language=lang)) + "\n"
+                        text = clean_text(text)
+                        fulltext.append(text)
                     except sr.UnknownValueError:
                         text = "*** Microsoft Bing Voice Recognition could not understand this fragment ***\n"
                     except sr.RequestError as e:
                         text = "*** Could not request results from Microsoft Bing Voice Recognition service ***\n"
                     bot.send_message(chat_id=update.message.chat_id, text=text)
-                    fulltext.append(text)
                     duration -= 15
             bot.send_message(chat_id=update.message.chat_id, text="*** Subtitles are over ***")
             with open('subtitles/' + name_hashed, "w") as f:
@@ -101,11 +114,34 @@ updater.start_polling()
 """   Service functions   """
 
 
+def clean_text(text):
+    words = text.split(" ")
+    text = ""
+    for word in words:
+        if word != "hmm" and word != "Hmm":
+            text += word + " "
+    return text
+
+
 def get_id(url):
     url = url[url.find("=")+1:]
     if url.find("=") == -1:
         url = url[:url.find("=")]
     return url
+
+
+def lang_check(l):
+    if l in ['en', 'EN', 'eng', 'english', 'ENG']:
+        return 'en-US'
+    else:
+        return "ru-RU"
+
+
+def sub_check(s):
+    if s == "no_sub":
+        return False
+    else:
+        return True
 
 
 def sound_from_youtube(url):
@@ -114,8 +150,32 @@ def sound_from_youtube(url):
     name = get_id(url)
     best.download(filepath=name + ".webm")
     command = "ffmpeg -i " + name + ".webm -ab 160k -ac 2 -ar 44100 -vn " + name + ".wav"
-    # command = "ffmpeg -i " + name + ".webm " + name + ".wav"
+    #command = "ffmpeg -i " + name + ".webm -ab 160k -ac 2 -ar 44100 -vn " + name + "1.wav"
     subprocess.call(command, shell=True)
+    # Prepare sound to handle
+    # wr = wave.open(name + '1.wav', 'r')
+    # par = list(wr.getparams())
+    # par[3] = 0
+    # ww = wave.open(name + '.wav', 'w')
+    # ww.setparams(tuple(par))
+    # lowpass = 80
+    # highpass = 2000
+    # sz = wr.getframerate()
+    # c = int(wr.getnframes() / sz)
+    # for num in range(c):
+    #     print('Processing {}/{} s'.format(num + 1, c))
+    #     da = np.fromstring(wr.readframes(sz), dtype=np.int16)
+    #     left, right = da[0::2], da[1::2]
+    #     lf, rf = np.fft.rfft(left), np.fft.rfft(right)
+    #     lf[:lowpass], rf[:lowpass] = 0, 0
+    #     lf[55:66], rf[55:66] = 0, 0
+    #     lf[highpass:], rf[highpass:] = 0, 0
+    #     nl, nr = np.fft.irfft(lf), np.fft.irfft(rf)
+    #     ns = np.column_stack((nl, nr)).ravel().astype(np.int16)
+    #     ww.writeframes(ns.tostring())
+    # wr.close()
+    # ww.close()
+    #subprocess.call(["rm", name + "1.wav"])
 
 
 def url_check(url):
