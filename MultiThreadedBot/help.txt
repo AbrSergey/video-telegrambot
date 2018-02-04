@@ -1,11 +1,8 @@
 -------------help-------------
-Quick guide to VideoSubtitles_bot.
+Quick guide to VideoSubtitler_bot.
 This bot is designed to search and create subtitles for video from YouTube.
-You can give him a link to the video and if the subtitles are found you will see the message "*** Good URL. There is subtitles for this video: ***". Uploading subtitles may take several seconds.
-If there are no subtitles, you will see the message "*** Good URL. Wait for the audio file loading ***". This means that the bot need some time to load the audio track from the video and handle it. He will report the end of the process with a message "*** Audio file is loaded. Now messages with subtitles will come to you ***".
-Then the bot with periodicity in a few seconds will send you fragments of subtitles. If the server could not recognize the audio fragment, you will see "*** Microsoft Bing Voice Recognition could not understand this fragment ***". If server could not send request you will see "*** Could not request results from Microsoft Bing Voice Recognition service ***"
-At the end of the subtitles "*** Subtitles are over ***" will be displayed. Having created subtitles for this video once you no longer have to wait yet - the subtitles for each handled video are saved.
-If there is no correct YouTube video URL you get message "*** This is no valid URL. Please enter correct YouTube video URL ***"
-You can use the optional parameter "en" (or "eng", "EN", "english") to recognize speech in english language and optional parameter "no_sub" to ignore youtube subtitles.
+You can give him a link to the video and if the subtitles are found on server you immediately receive subtitles. Else if automatic subtitles are found, they will be downloaded and sent to you by several messages. Otherwise, audio will be downloaded and processed and sent to you in small messages.
+You can use the optional parameter "en" (or "eng", "EN", "english") to recognize speech in english language and optional parameter "no_sub" to ignore youtube subtitles. The order of the parameters is important.
+Example: https://www.youtube.com/watch?v=d8BWU7vxGjk eng no_sub
 It is all information you should know about this bot. Good using!
 ------------------------------
