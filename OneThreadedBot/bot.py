@@ -9,14 +9,16 @@ import wave
 import contextlib
 import subprocess
 import hashlib
-import glob
-import numpy as np
-import youtube_dl
+import requests
+from youtube_dl import YoutubeDL
+import re
+
 
 """   Bot part   """
 
 
 from config import TOKEN, BING_KEY
+REGULAR_EXPRESSION = '<[a-zA-Z0-9|\.]*>|<\/c>|<[0-9:.]*>'
 
 
 def start(bot, update):
@@ -42,53 +44,70 @@ def echo(bot, update):
         name_hashed = hashlib.sha1(name.encode('utf8')).hexdigest()
         if sub and check_in_folder(name):
             with open('subtitles/' + name_hashed) as f:
-                fulltext = f.read()
                 bot.send_message(chat_id=update.message.chat_id, text="*** Good URL. "
                                                                       "There is subtitles for this video: ***")
-                bot.send_message(chat_id=update.message.chat_id, text=fulltext)
+                fulltext = f.readlines()
+                i = 0
+                text = ''
+                for line in fulltext:
+                    text = text + line
+                    i = i + 1
+                    if i % 5 == 0:
+                        bot.send_message(chat_id=update.message.chat_id, text=text)
+                        text = ''
                 bot.send_message(chat_id=update.message.chat_id, text="*** Subtitles are over ***")
-        elif sub and get_subtitles(url):
+        elif sub and download_subtitles(url, lang):
             with open('subtitles/' + name_hashed) as f:
-                fulltext = f.read()
                 bot.send_message(chat_id=update.message.chat_id, text="*** Good URL. "
                                                                       "There is subtitles for this video: *** ")
-                bot.send_message(chat_id=update.message.chat_id, text=fulltext)
+                fulltext = f.readlines()
+                i = 0
+                text = ''
+                for line in fulltext:
+                    text = text + line
+                    i = i + 1
+                    if i % 5 == 0:
+                        bot.send_message(chat_id=update.message.chat_id, text=text)
+                        text = ''
                 bot.send_message(chat_id=update.message.chat_id, text="*** Subtitles are over ***")
         else:
             bot.send_message(chat_id=update.message.chat_id, text="*** Good URL. Wait for the audio file loading ***")
-            sound_from_youtube(url)
-            bot.send_message(chat_id=update.message.chat_id, text="*** Audio file is loaded. "
+            try:
+                sound_from_youtube(url)
+                bot.send_message(chat_id=update.message.chat_id, text="*** Audio file is loaded. "
                                                                   "Now messages with subtitles will come to you ***")
-            r = sr.Recognizer()
-            with contextlib.closing(wave.open(name + ".wav", 'r')) as f:
-                frames = f.getnframes()
-                rate = f.getframerate()
-                duration = frames / float(rate)
-            fulltext = []
-            with sr.AudioFile(name + ".wav") as source:
-                while True:
-                    if duration < 0:
-                        break
-                    audio = r.record(source, duration=15)
-                    try:
-                        text = (r.recognize_bing(audio, key=BING_KEY, language=lang)) + "\n"
-                        text = clean_text(text)
-                        fulltext.append(text)
-                    except sr.UnknownValueError:
-                        text = "*** Microsoft Bing Voice Recognition could not understand this fragment ***\n"
-                    except sr.RequestError as e:
-                        text = "*** Could not request results from Microsoft Bing Voice Recognition service ***\n"
-                    bot.send_message(chat_id=update.message.chat_id, text=text)
-                    duration -= 15
-            bot.send_message(chat_id=update.message.chat_id, text="*** Subtitles are over ***")
-            with open('subtitles/' + name_hashed, "w") as f:
-                for line in fulltext:
-                    if len(line) > 2 and not line[2] == ':' and not line[0:2] == '\n':
-                        f.writelines(line)
-            subprocess.call(["rm", name + ".wav"])
-            subprocess.call(["rm", name + ".webm"])
+                r = sr.Recognizer()
+                with contextlib.closing(wave.open('tmp/' + name + ".wav", 'r')) as f:
+                    frames = f.getnframes()
+                    rate = f.getframerate()
+                    duration = frames / float(rate)
+                fulltext = []
+                with sr.AudioFile('tmp/' + name + ".wav") as source:
+                    while True:
+                        if duration < 0:
+                            break
+                        audio = r.record(source, duration=15)
+                        try:
+                            text = (r.recognize_bing(audio, key=BING_KEY, language=lang)) + "\n"
+                            text = clean_text(text)
+                            fulltext.append(text)
+                        except sr.UnknownValueError:
+                            text = "*** Microsoft Bing Voice Recognition could not understand this fragment ***\n"
+                        except sr.RequestError as e:
+                            text = "*** Could not request results from Microsoft Bing Voice Recognition service ***\n"
+                        bot.send_message(chat_id=update.message.chat_id, text=text)
+                        duration -= 15
+                bot.send_message(chat_id=update.message.chat_id, text="*** Subtitles are over ***")
+                with open('subtitles/' + name_hashed, "w") as f:
+                    for line in fulltext:
+                        if len(line) > 2 and not line[2] == ':' and not line[0:2] == '\n':
+                            f.writelines(line)
+                subprocess.call(["rm", 'tmp/' + name + ".wav"])
+                subprocess.call(["rm", 'tmp/' + name + ".webm"])
+            except Exception:
+                bot.send_message(chat_id=update.message.chat_id, text="*** Can't download audiofile ***")
     else:
-        bot.send_message(chat_id=update.message.chat_id, text="*** This is no valid URL. " +
+        bot.send_message(chat_id=update.message.chat_id, text="*** This is not valid URL. " +
                                                               "Please enter correct YouTube video URL ***")
 
 
@@ -149,14 +168,14 @@ def sound_from_youtube(url):
     best = video.getbest(preftype="webm")
     name = get_id(url)
     best.download(filepath=name + ".webm")
-    command = "ffmpeg -i " + name + ".webm -ab 160k -ac 2 -ar 44100 -vn " + name + ".wav"
-    #command = "ffmpeg -i " + name + ".webm -ab 160k -ac 2 -ar 44100 -vn " + name + "1.wav"
+    command = "ffmpeg -i " + 'tmp/' + name + ".webm -ab 160k -ac 2 -ar 44100 -vn " +'tmp/' + name + ".wav"
+    #command = "ffmpeg -i " + 'tmp/' + name + ".webm -ab 160k -ac 2 -ar 44100 -vn " + 'tmp/' + name + "1.wav"
     subprocess.call(command, shell=True)
     # Prepare sound to handle
-    # wr = wave.open(name + '1.wav', 'r')
+    # wr = wave.open('tmp/' + name + '1.wav', 'r')
     # par = list(wr.getparams())
     # par[3] = 0
-    # ww = wave.open(name + '.wav', 'w')
+    # ww = wave.open('tmp/' + name + '.wav', 'w')
     # ww.setparams(tuple(par))
     # lowpass = 80
     # highpass = 2000
@@ -175,7 +194,7 @@ def sound_from_youtube(url):
     #     ww.writeframes(ns.tostring())
     # wr.close()
     # ww.close()
-    #subprocess.call(["rm", name + "1.wav"])
+    #subprocess.call(["rm", 'tmp/' + name + "1.wav"])
 
 
 def url_check(url):
@@ -199,20 +218,48 @@ def check_in_folder(id):
         return False
 
 
-def get_subtitles(url):
-    id = get_id(url)
-    id_hash = hashlib.sha1(id.encode('utf8')).hexdigest()
-    subprocess.call(["youtube-dl", "--write-sub", "--skip-download", "--output", id_hash, url])
+def download_subtitles(url, lang):
     try:
-        filename_tmp = glob.glob(id_hash + '*')
-        assert (len(filename_tmp) == 1)
-        with open(filename_tmp[0], 'r') as f:
-            file_sub = open('subtitles/' + id_hash, 'w')
-            for line in f:
-                if len(line) > 2 and not line[2] == ':' and not line[0:2] == '\n':
-                    file_sub.writelines(line)
-        f.close()
-        subprocess.call(["rm", filename_tmp[0]])
-        return True
-    except Exception:
+        id = get_id(url)
+        id_hash = hashlib.sha1(id.encode('utf8')).hexdigest()
+        ydl = YoutubeDL(dict(allsubtitles=True, writeautomaticsub=True))
+        with ydl:
+            result = ydl.extract_info(url, download=False)
+        url_sub = result['requested_subtitles'][lang[:2]]['url']
+        response = requests.get(url_sub)
+        text = response.text
+
+        parser = re.search(REGULAR_EXPRESSION, text)
+        while parser != None:
+            parser = parser.group(0)
+            text = text.replace(parser, '')
+            parser = re.search(REGULAR_EXPRESSION, text)
+
+        f_write = open('tmp/' + id_hash, 'w')
+        f_write.write(text)
+        f_write.close()
+
+        try:
+            with open('tmp/' + id_hash, 'r') as f:
+                file_sub = open('subtitles/' + id_hash, 'w')
+                i = 0
+                text = ''
+                for line in f:
+                    if i < 5:
+                        if re.search('-->|{|}|::|##|WEBVTT|Language:|Kind:|Style:', line) == None:
+                            text = text + line
+                            text = text.replace("\n", " ")
+                            text = text.replace("  ", " ")
+                            i = i + 1
+                    else:
+                        i = 0
+                        text = text + "\n"
+                        file_sub.writelines(text)
+                        text = ''
+            file_sub.close()
+            subprocess.call(["rm", 'tmp/' + id_hash])
+            return True
+        except Exception:
+            return False
+    except:
         return False

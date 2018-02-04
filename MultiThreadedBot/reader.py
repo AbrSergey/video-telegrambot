@@ -7,8 +7,9 @@ from telegram.ext import CommandHandler
 from telegram.ext import MessageHandler, Filters
 from urllib.parse import urlparse
 import validators
+import re
 
-from config import TOKEN, BING_KEY
+from config import TOKEN
 
 
 def start(bot, update):
@@ -26,11 +27,20 @@ def echo(bot, update):
         json_data = json.dumps({"chat_id" : chat_id, "url" : message})
         print("before send" + json_data) #TMP
         bot.send_message(chat_id=update.message.chat_id, text="*** Good URL ***")
-        channel.basic_publish(exchange='',
+        try:
+            connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
+            channel = connection.channel()
+            channel.queue_declare(queue=queue)  # , durable=True, auto_delete=False, exclusive=False)
+            channel.basic_publish(exchange='',
                               routing_key=queue,
-                              body=json_data,
-                              properties=pika.BasicProperties(delivery_mode=2))
-        print("after send") #TMP
+                              body=json_data) #,
+                              #properties=pika.BasicProperties(delivery_mode=2))
+            connection.close()
+            print("after send") #TMP
+        except:
+            print("Not send! Error in channel to Rabbit!!!")  # TMP
+            bot.send_message(chat_id=update.message.chat_id, text="*** Ooops... Sorry, your data will not be processed"
+                                                              "Try again***")
     else:
         print("Error url") #TMP
         bot.send_message(chat_id=update.message.chat_id, text="*** This is no valid URL. " +
@@ -46,7 +56,10 @@ def help(bot, update):
 
 
 def url_check(url):
-    list = ['www.youtube.']
+    list = ['www.youtube.', 'www.youtube.com']
+    if re.search("youtu.be", url) != None:
+        url = url.replace("youtu.be/", "www.youtube.com/watch?v=")
+    print(url) #TMP
     if validators.url(url):
         url_netloc = urlparse(url).netloc
         for i in list:
@@ -72,7 +85,4 @@ def main():
 
 if __name__ == '__main__':
     queue = 'telegram_bot'
-    connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
-    channel = connection.channel()
-    channel.queue_declare(queue=queue, durable=True, auto_delete=False, exclusive=False)
     main()
