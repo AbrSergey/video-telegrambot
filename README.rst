@@ -44,12 +44,33 @@ Video-telegrambot - это бот для мессенджера Telegram, кот
 Второй вариант - использование docker-контейнера: ::
 
     Скачайте и установите Docker и загрузите образ с помощью команды:
+    
     docker pull alekseypauls/videotelegrambot
+    
     или 
+    
     docker pull alekseypauls/multithreadedbot
+    
     Сойздайте контейнер:
+    
     docker run -it -p 80:80 alekseypauls/videotelegrambot bash
-    Внутри контейнера выполните команду:
+    
+    Внутри контейнера выполните команды:
+    
+    export LANGUAGE=ru_RU.UTF-8
+    export LC_CTYPE=ru_RU.UTF-8
+    export LC_NUMERIC=ru_RU.UTF-8
+    export LC_TIME=ru_RU.UTF-8
+    export LC_COLLATE=ru_RU.UTF-8
+    export LC_MONETARY=ru_RU.UTF-8
+    export LC_MESSAGES=ru_RU.UTF-8
+    export LC_PAPER=ru_RU.UTF-8
+    export LC_NAME=ru_RU.UTF-8
+    export LC_ADDRESS=ru_RU.UTF-8
+    export LC_TELEPHONE=ru_RU.UTF-8
+    export LC_MEASUREMENT=ru_RU.UTF-8
+    export LC_IDENTIFICATION=ru_RU.UTF-8
+    export LC_ALL=ru_RU.UTF-8
     python3 ./bot.py
     
     Готово! 
